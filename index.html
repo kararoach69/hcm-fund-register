@@ -91,6 +91,38 @@ function switchFinancialYear(fy = document.getElementById('fySelector').value) {
     generateFYOptions(); // Refresh list
     document.getElementById('fySelector').value = fy;
 }
+// INDIAN CRORE-LAKH-THOUSAND FORMATTER
+function formatIndianCurrency(amount) {
+    if (amount === 0) return '0';
+    
+    let absAmount = Math.abs(amount);
+    let sign = amount < 0 ? '-' : '';
+    
+    // Crore (1 Cr = 10,000,000)
+    if (absAmount >= 10000000) {
+        let crores = Math.floor(absAmount / 10000000);
+        let lakhs = Math.floor((absAmount % 10000000) / 100000);
+        let thousands = Math.floor((absAmount % 100000) / 1000);
+        let hundreds = absAmount % 1000;
+        return `${sign}₹${crores} Cr ${lakhs} L ${thousands},${hundreds.toString().padStart(3,'0')}`;
+    }
+    // Lakh (1 L = 100,000)
+    else if (absAmount >= 100000) {
+        let lakhs = Math.floor(absAmount / 100000);
+        let thousands = Math.floor((absAmount % 100000) / 1000);
+        let hundreds = absAmount % 1000;
+        return `${sign}₹${lakhs} L ${thousands},${hundreds.toString().padStart(3,'0')}`;
+    }
+    // Thousand
+    else if (absAmount >= 1000) {
+        let thousands = Math.floor(absAmount / 1000);
+        let hundreds = absAmount % 1000;
+        return `${sign}₹${thousands},${hundreds.toString().padStart(3,'0')}`;
+    }
+    else {
+        return `${sign}₹${absAmount}`;
+    }
+}
 
 // MODIFY loadData() function - replace existing:
 function loadData() {
@@ -299,8 +331,8 @@ function saveData() {
             document.getElementById('currentBudget').innerHTML = data.fy ? `
                 <div class="budget-box">
                     <strong>FY: ${data.fy}</strong><br>
-                    01-SALARIES: ₹${data.salBudget.toLocaleString()} | 
-                    07-ALLOWANCES: ₹${data.allBudget.toLocaleString()}
+                    01-SALARIES: ${formatIndianCurrency(data.salBudget)} | 
+                    07-ALLOWANCES: ${formatIndianCurrency(data.allBudget)}
                 </div>
             ` : '<p>Set budget first using Edit Budget button</p>';
 
@@ -311,15 +343,15 @@ function saveData() {
             document.getElementById('summary').innerHTML = `
                 <div class="budget-box">
                     <h3>01-SALARIES</h3>
-                    <p>Budget: ₹${data.salBudget.toLocaleString()}</p>
-                    <p>Total Exp: ₹${totalSalExp.toLocaleString()}</p>
-                    <p class="balance ${data.salBudget - totalSalExp >= 0 ? 'positive' : 'negative'}">Balance: ₹${(data.salBudget - totalSalExp).toLocaleString()}</p>
-                </div>
+                    <p>Budget: ${formatIndianCurrency(data.salBudget)}</p>
+                    <p>Total Exp: ${formatIndianCurrency(totalSalExp)}</p>
+                    <p class="balance ${data.salBudget - totalSalExp >= 0 ? 'positive' : 'negative'}">Balance: ${formatIndianCurrency(data.salBudget - totalSalExp)}</p>
+                 </div>
                 <div class="budget-box">
                     <h3>07-ALLOWANCES</h3>
-                    <p>Budget: ₹${data.allBudget.toLocaleString()}</p>
-                    <p>Total Exp: ₹${totalAllExp.toLocaleString()}</p>
-                    <p class="balance ${data.allBudget - totalAllExp >= 0 ? 'positive' : 'negative'}">Balance: ₹${(data.allBudget - totalAllExp).toLocaleString()}</p>
+                    <p>Budget: ${formatIndianCurrency(data.allBudget)}</p>
+                    <p>Total Exp: ${formatIndianCurrency(totalAllExp)}</p>
+                    <p class="balance ${data.salBudget - totalAllExp >= 0 ? 'positive' : 'negative'}">Balance: ${formatIndianCurrency(data.allBudget - totalAllExp)}</p>
                 </div>
             `;
 
