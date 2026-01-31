@@ -8,7 +8,7 @@
     <style>
         body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
         .section { background: white; margin: 20px 0; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        input, textarea, button { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        input, textarea, button, select { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
         textarea { width: 100%; height: 60px; resize: vertical; }
         button { background: #007bff; color: white; cursor: pointer; border: none; }
         button:hover { background: #0056b3; }
@@ -17,6 +17,8 @@
         .btn-edit { background: #ffc107 !important; color: #212529 !important; }
         .btn-edit:hover { background: #e0a800 !important; }
         .btn-pdf { background: #28a745 !important; }
+        .btn-new-fy { background: #28a745 !important; }
+        .edit-budget { background: #17a2b8 !important; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background: #f8f9fa; }
@@ -29,114 +31,21 @@
         .modal-content { background: white; margin: 10% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
         .close { color: #aaa; float: right; font-size: 28px; cursor: pointer; }
         .action-col { text-align: center; white-space: nowrap; width: 160px; }
-        .edit-budget { background: #17a2b8; }
     </style>
 </head>
 <body>
     <h1>High Court of Manipur - Fund Register</h1>
 
-    <!-- Replace ONLY the FIRST SECTION (Financial Year Budget) with this: -->
-
-<div class="section">
-    <h2>Financial Year 
-        <select id="fySelector" onchange="switchFinancialYear()" style="padding: 5px; margin-left: 10px;">
-            <option value="">Select FY</option>
-        </select>
-        <button class="edit-budget" onclick="openBudgetModal()" style="font-size: 14px; padding: 5px 10px;">Edit Budget</button>
-        <button onclick="createNewFY()" style="background: #28a745; margin-left: 10px; font-size: 14px; padding: 5px 10px;">➕ New FY</button>
-    </h2>
-    <div id="currentBudget"></div>
-</div>
-
-<!-- Add this NEW function in the <script> section (before loadData()) -->
-<script>
-function generateFYOptions() {
-    const select = document.getElementById('fySelector');
-    const currentYear = new Date().getFullYear();
-    select.innerHTML = '<option value="">Select FY</option>';
-    
-    // Generate FY options: 2025-26, 2026-27, 2027-28 (current + past 5 years)
-    for(let i = 5; i >= 0; i--) {
-        const fy = (currentYear - i) + '-' + (currentYear - i + 1).toString().slice(-2);
-        const option = document.createElement('option');
-        option.value = fy;
-        option.text = fy;
-        select.appendChild(option);
-    }
-}
-
-function createNewFY() {
-    const newFY = prompt('Enter new Financial Year (e.g., 2026-27):');
-    if (newFY && !data.fyList?.includes(newFY)) {
-        if (!data.fyList) data.fyList = [];
-        data.fyList.push(newFY);
-        switchFinancialYear(newFY);
-    }
-}
-
-function switchFinancialYear(fy = document.getElementById('fySelector').value) {
-    if (!fy) return;
-    
-    // Load data for this FY (separate storage)
-    const saved = localStorage.getItem(`hcmFundData_${fy}`);
-    if (saved) {
-        data = JSON.parse(saved);
-    } else {
-        data = { fy: fy, salBudget: 0, allBudget: 0, bills: [] };
-    }
-    
-    calculateAllRunningTotals();
-    saveData();
-    render();
-    generateFYOptions(); // Refresh list
-    document.getElementById('fySelector').value = fy;
-}
-// INDIAN CRORE-LAKH-THOUSAND FORMATTER
-function formatIndianCurrency(amount) {
-    if (amount === 0) return '0';
-    
-    let absAmount = Math.abs(amount);
-    let sign = amount < 0 ? '-' : '';
-    
-    // Crore (1 Cr = 10,000,000)
-    if (absAmount >= 10000000) {
-        let crores = Math.floor(absAmount / 10000000);
-        let lakhs = Math.floor((absAmount % 10000000) / 100000);
-        let thousands = Math.floor((absAmount % 100000) / 1000);
-        let hundreds = absAmount % 1000;
-        return `${sign}₹${crores} Cr ${lakhs} L ${thousands},${hundreds.toString().padStart(3,'0')}`;
-    }
-    // Lakh (1 L = 100,000)
-    else if (absAmount >= 100000) {
-        let lakhs = Math.floor(absAmount / 100000);
-        let thousands = Math.floor((absAmount % 100000) / 1000);
-        let hundreds = absAmount % 1000;
-        return `${sign}₹${lakhs} L ${thousands},${hundreds.toString().padStart(3,'0')}`;
-    }
-    // Thousand
-    else if (absAmount >= 1000) {
-        let thousands = Math.floor(absAmount / 1000);
-        let hundreds = absAmount % 1000;
-        return `${sign}₹${thousands},${hundreds.toString().padStart(3,'0')}`;
-    }
-    else {
-        return `${sign}₹${absAmount}`;
-    }
-}
-
-// MODIFY loadData() function - replace existing:
-function loadData() {
-    generateFYOptions(); // Auto-populate FY dropdown
-    const currentFY = data.fy || '2026-27'; // Default
-    switchFinancialYear(currentFY);
-}
-
-// MODIFY saveData() function:
-function saveData() {
-    localStorage.setItem(`hcmFundData_${data.fy}`, JSON.stringify(data));
-}
-</script>
-
+    <div class="section">
+        <h2>Financial Year 
+            <select id="fySelector" onchange="switchFinancialYear()" style="padding: 5px; margin-left: 10px;">
+                <option value="">Select FY</option>
+            </select>
+            <button class="edit-budget" onclick="openBudgetModal()" style="font-size: 14px; padding: 5px 10px;">Edit Budget</button>
+            <button class="btn-new-fy" onclick="createNewFY()" style="font-size: 14px; padding: 5px 10px;">➕ New FY</button>
+        </h2>
+        <div id="currentBudget"></div>
+    </div>
 
     <div class="section">
         <h2>Add Bill</h2>
@@ -144,8 +53,8 @@ function saveData() {
         <input type="text" id="cmisBill" placeholder="CMIS Bill Number">
         <input type="text" id="deptBill" placeholder="Department Bill Number">
         <textarea id="particulars" placeholder="Particulars of Bill (Detailed Description)"></textarea>
-        <input type="number" id="sanctionAmt" step="0.01" placeholder="Sanction Amount (₹)">
-        <input type="number" id="salAmt" step="0.01" placeholder="Amount on Salaries (₹)">
+        <input type="number" id="sanctionAmt" step="0.01" placeholder="Sanction Amount">
+        <input type="number" id="salAmt" step="0.01" placeholder="Amount on Salaries">
         <button onclick="addBill()">Add Bill</button>
     </div>
 
@@ -184,9 +93,9 @@ function saveData() {
             <h3>Edit Financial Year Budget</h3>
             <input type="text" id="editFy" placeholder="Financial Year (2026-27)">
             <br>
-            <label>01-SALARIES Budget (₹):</label>
+            <label>01-SALARIES Budget:</label>
             <input type="number" id="editSalBudget" step="0.01">
-            <label>07-ALLOWANCES Budget (₹):</label>
+            <label>07-ALLOWANCES Budget:</label>
             <input type="number" id="editAllBudget" step="0.01">
             <button onclick="saveBudgetEdit()">Save Budget</button>
             <button onclick="closeBudgetModal()">Cancel</button>
@@ -203,8 +112,8 @@ function saveData() {
             <input type="text" id="editCmis" placeholder="CMIS Bill Number">
             <input type="text" id="editDept" placeholder="Department Bill Number">
             <textarea id="editPart" placeholder="Particulars"></textarea>
-            <input type="number" id="editSanction" step="0.01" placeholder="Sanction Amount (₹)">
-            <input type="number" id="editSal" step="0.01" placeholder="Amount on Salaries (₹)">
+            <input type="number" id="editSanction" step="0.01" placeholder="Sanction Amount">
+            <input type="number" id="editSal" step="0.01" placeholder="Amount on Salaries">
             <button onclick="saveEdit()">Save Changes</button>
             <button onclick="closeModal()">Cancel</button>
         </div>
@@ -214,15 +123,57 @@ function saveData() {
         let data = { fy: '', salBudget: 0, allBudget: 0, bills: [] };
         let editIndex = -1;
 
-        function loadData() {
-            const saved = localStorage.getItem('hcmFundData');
-            if (saved) data = JSON.parse(saved);
+        // INDIAN RUPEE FORMATTING
+        function formatRupees(amount) {
+            return new Intl.NumberFormat('en-IN').format(amount);
+        }
+
+        function generateFYOptions() {
+            const select = document.getElementById('fySelector');
+            const currentYear = new Date().getFullYear();
+            select.innerHTML = '<option value="">Select FY</option>';
+            
+            for(let i = 5; i >= 0; i--) {
+                const fy = (currentYear - i) + '-' + (currentYear - i + 1).toString().slice(-2);
+                const option = document.createElement('option');
+                option.value = fy;
+                option.text = fy;
+                select.appendChild(option);
+            }
+        }
+
+        function createNewFY() {
+            const newFY = prompt('Enter new Financial Year (e.g., 2026-27):');
+            if (newFY && newFY.trim()) {
+                switchFinancialYear(newFY);
+            }
+        }
+
+        function switchFinancialYear(fy = document.getElementById('fySelector').value) {
+            if (!fy) return;
+            
+            const saved = localStorage.getItem(`hcmFundData_${fy}`);
+            if (saved) {
+                data = JSON.parse(saved);
+            } else {
+                data = { fy: fy, salBudget: 0, allBudget: 0, bills: [] };
+            }
+            
             calculateAllRunningTotals();
+            saveData();
             render();
+            generateFYOptions();
+            document.getElementById('fySelector').value = fy;
+        }
+
+        function loadData() {
+            generateFYOptions();
+            const currentFY = '2026-27';
+            switchFinancialYear(currentFY);
         }
 
         function saveData() {
-            localStorage.setItem('hcmFundData', JSON.stringify(data));
+            localStorage.setItem(`hcmFundData_${data.fy}`, JSON.stringify(data));
         }
 
         function calculateRunningTotals(index) {
@@ -238,12 +189,6 @@ function saveData() {
 
         function calculateAllRunningTotals() {
             data.bills.forEach((bill, index) => calculateRunningTotals(index));
-        }
-
-        function setInitialBudget() {
-            data.fy = document.getElementById('editFy')?.value || data.fy;
-            data.salBudget = parseFloat(document.getElementById('editSalBudget')?.value) || data.salBudget;
-            data.allBudget = parseFloat(document.getElementById('editAllBudget')?.value) || data.allBudget;
         }
 
         function openBudgetModal() {
@@ -331,10 +276,10 @@ function saveData() {
             document.getElementById('currentBudget').innerHTML = data.fy ? `
                 <div class="budget-box">
                     <strong>FY: ${data.fy}</strong><br>
-                    01-SALARIES: ${formatIndianCurrency(data.salBudget)} | 
-                    07-ALLOWANCES: ${formatIndianCurrency(data.allBudget)}
+                    01-SALARIES: ₹${formatRupees(data.salBudget)} | 
+                    07-ALLOWANCES: ₹${formatRupees(data.allBudget)}
                 </div>
-            ` : '<p>Set budget first using Edit Budget button</p>';
+            ` : '<p>Select or create Financial Year first</p>';
 
             const lastBill = data.bills[data.bills.length - 1];
             const totalSalExp = lastBill ? lastBill.salExp : 0;
@@ -343,15 +288,15 @@ function saveData() {
             document.getElementById('summary').innerHTML = `
                 <div class="budget-box">
                     <h3>01-SALARIES</h3>
-                    <p>Budget: ${formatIndianCurrency(data.salBudget)}</p>
-                    <p>Total Exp: ${formatIndianCurrency(totalSalExp)}</p>
-                    <p class="balance ${data.salBudget - totalSalExp >= 0 ? 'positive' : 'negative'}">Balance: ${formatIndianCurrency(data.salBudget - totalSalExp)}</p>
-                 </div>
+                    <p>Budget: ₹${formatRupees(data.salBudget)}</p>
+                    <p>Total Exp: ₹${formatRupees(totalSalExp)}</p>
+                    <p class="balance ${data.salBudget - totalSalExp >= 0 ? 'positive' : 'negative'}">Balance: ₹${formatRupees(data.salBudget - totalSalExp)}</p>
+                </div>
                 <div class="budget-box">
                     <h3>07-ALLOWANCES</h3>
-                    <p>Budget: ${formatIndianCurrency(data.allBudget)}</p>
-                    <p>Total Exp: ${formatIndianCurrency(totalAllExp)}</p>
-                    <p class="balance ${data.salBudget - totalAllExp >= 0 ? 'positive' : 'negative'}">Balance: ${formatIndianCurrency(data.allBudget - totalAllExp)}</p>
+                    <p>Budget: ₹${formatRupees(data.allBudget)}</p>
+                    <p>Total Exp: ₹${formatRupees(totalAllExp)}</p>
+                    <p class="balance ${data.allBudget - totalAllExp >= 0 ? 'positive' : 'negative'}">Balance: ₹${formatRupees(data.allBudget - totalAllExp)}</p>
                 </div>
             `;
 
@@ -364,13 +309,13 @@ function saveData() {
                     <td>HCM/${bill.deptBill}</td>
                     <td>${bill.cmisBill}</td>
                     <td>${bill.particulars.substring(0, 40)}${bill.particulars.length > 40 ? '...' : ''}</td>
-                    <td>₹${bill.sanctionAmt.toLocaleString()}</td>
-                    <td>₹${bill.salAmt.toLocaleString()}</td>
-                    <td>₹${bill.salExp.toLocaleString()}</td>
-                    <td class="${bill.salBal >= 0 ? 'positive' : 'negative'}">₹${bill.salBal.toLocaleString()}</td>
-                    <td>₹${bill.allAmt.toLocaleString()}</td>
-                    <td>₹${bill.allExp.toLocaleString()}</td>
-                    <td class="${bill.allBal >= 0 ? 'positive' : 'negative'}">₹${bill.allBal.toLocaleString()}</td>
+                    <td>₹${formatRupees(bill.sanctionAmt)}</td>
+                    <td>₹${formatRupees(bill.salAmt)}</td>
+                    <td>₹${formatRupees(bill.salExp)}</td>
+                    <td class="${bill.salBal >= 0 ? 'positive' : 'negative'}">₹${formatRupees(bill.salBal)}</td>
+                    <td>₹${formatRupees(bill.allAmt)}</td>
+                    <td>₹${formatRupees(bill.allExp)}</td>
+                    <td class="${bill.allBal >= 0 ? 'positive' : 'negative'}">₹${formatRupees(bill.allBal)}</td>
                     <td class="action-col">
                         <button class="btn-edit" onclick="editBill(${index})">Edit</button>
                         <button class="btn-delete" onclick="deleteBill(${index})">Delete</button>
@@ -404,11 +349,11 @@ function saveData() {
                 y += 5;
                 doc.text(`Particulars: ${bill.particulars.substring(0, 80)}${bill.particulars.length > 80 ? '...' : ''}`, 25, y);
                 y += 7;
-                doc.text(`Sanction: ₹${bill.sanctionAmt.toLocaleString()} | Sal: ₹${bill.salAmt.toLocaleString()} | All: ₹${bill.allAmt.toLocaleString()}`, 25, y);
+                doc.text(`Sanction: ₹${formatRupees(bill.sanctionAmt)} | Sal: ₹${formatRupees(bill.salAmt)} | All: ₹${formatRupees(bill.allAmt)}`, 25, y);
                 y += 7;
-                doc.text(`Sal Exp: ₹${bill.salExp.toLocaleString()} | Sal Bal: ₹${bill.salBal.toLocaleString()}`, 25, y);
+                doc.text(`Sal Exp: ₹${formatRupees(bill.salExp)} | Sal Bal: ₹${formatRupees(bill.salBal)}`, 25, y);
                 y += 7;
-                doc.text(`All Exp: ₹${bill.allExp.toLocaleString()} | All Bal: ₹${bill.allBal.toLocaleString()}`, 25, y);
+                doc.text(`All Exp: ₹${formatRupees(bill.allExp)} | All Bal: ₹${formatRupees(bill.allBal)}`, 25, y);
                 y += 10;
             });
             doc.save(`HCM-Bills-Register-${data.fy || 'current'}.pdf`);
