@@ -1,393 +1,256 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HCM Fund Register</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
-        #lockscreen { position: fixed; inset: 0; background: #111; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
-        .section { background: white; margin: 20px 0; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        input, textarea, button, select { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
-        textarea { width: 100%; height: 60px; resize: vertical; }
-        button { background: #007bff; color: white; cursor: pointer; border: none; }
-        button:hover { background: #0056b3; }
-        .btn-delete { background: #dc3545 !important; }
-        .btn-delete:hover { background: #c82333 !important; }
-        .btn-edit { background: #ffc107 !important; color: #212529 !important; }
-        .btn-edit:hover { background: #e0a800 !important; }
-        .btn-pdf { background: #28a745 !important; }
-        .btn-new-fy { background: #28a745 !important; }
-        .edit-budget { background: #17a2b8 !important; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #f8f9fa; }
-        .balance { font-weight: bold; font-size: 1.1em; }
-        .positive { color: green; }
-        .negative { color: red; }
-        #summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .budget-box { background: #e7f3ff; padding: 15px; border-radius: 5px; }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 10% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
-        .close { color: #aaa; float: right; font-size: 28px; cursor: pointer; }
-        .action-col { text-align: center; white-space: nowrap; width: 160px; }
-        /* COMPACT TABLE */
-        #billsTable { font-size: 12px; }
-        #billsTable th, #billsTable td { padding: 4px 6px; }
-        #billsTable .action-col button { padding: 4px 8px; font-size: 11px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCM Fund Register</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { font-family: Arial; max-width:1200px; margin:auto; padding:20px; background:#f5f5f5 }
+.section { background:#fff; padding:20px; margin:20px 0; border-radius:8px }
+input, textarea, button, select { padding:8px; margin:4px }
+button { background:#007bff; color:#fff; border:none; cursor:pointer }
+button:hover { background:#0056b3 }
+.btn-delete { background:#dc3545 }
+.btn-edit { background:#ffc107; color:#000 }
+.btn-new-fy, .btn-pdf { background:#28a745 }
+table { width:100%; border-collapse:collapse; margin-top:10px }
+th, td { border:1px solid #ddd; padding:6px }
+th { background:#f0f0f0 }
+.positive { color:green }
+.negative { color:red }
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5) }
+.modal-content { background:#fff; margin:10% auto; padding:20px; width:90%; max-width:500px }
+.close { float:right; cursor:pointer; font-size:22px }
+</style>
 </head>
+
 <body>
-    <div id="lockscreen">
-    <h2>🔒 Enter Password</h2>
-    <input type="password" id="pwd" autofocus>
-    <button onclick="unlock()">Unlock</button>
-    <p id="msg" style="color:red;"></p>
-    </div>
-    <script>
-    function unlock() {
-      if (document.getElementById("pwd").value === "lawai") {
-        document.getElementById("lockscreen").remove();
-      } else {
-        document.getElementById("msg").textContent = "Wrong password";
-      }
-    }
-    </script>
-    <h1>High Court of Manipur - Fund Register</h1>
 
-    <div class="section">
-        <h2>Financial Year 
-            <select id="fySelector" onchange="switchFinancialYear()" style="padding: 5px; margin-left: 10px;">
-                <option value="">Select FY</option>
-            </select>
-            <button class="edit-budget" onclick="openBudgetModal()" style="font-size: 14px; padding: 5px 10px;">Edit Budget</button>
-            <button class="btn-new-fy" onclick="createNewFY()" style="font-size: 14px; padding: 5px 10px;">➕ New FY</button>
-        </h2>
-        <div id="currentBudget"></div>
-    </div>
-
-    <div class="section">
-        <h2>Add Bill</h2>
-        <input type="date" id="billDate">
-        <input type="text" id="cmisBill" placeholder="CMIS Bill Number">
-        <input type="text" id="deptBill" placeholder="Department Bill Number">
-        <textarea id="particulars" placeholder="Particulars of Bill (Detailed Description)"></textarea>
-        <input type="number" id="sanctionAmt" step="0.01" placeholder="Sanction Amount">
-        <input type="number" id="salAmt" step="0.01" placeholder="Amount on Salaries">
-        <button onclick="addBill()">Add Bill</button>
-    </div>
-
-    <div class="section">
-        <h2>Fund Summary</h2>
-        <div id="summary"></div>
-    </div>
+<h1>High Court of Manipur – Fund Register</h1>
 
 <div class="section">
-    <h2>Bills <button class="btn-pdf" onclick="generateBillsPDF()">📄 PDF</button></h2>
-    <table id="billsTable">
-        <thead>
-            <tr>
-                <th>Date/Dept</th>
-                <th>CMIS</th>
-                <th>Particular of the Bill</th>
-                <th>Total Sanction</th>
-                <th>Salaries</th>
-                <th>Exp Sal</th>
-                <th>Bal Sal</th>
-                <th>Allowances</th>
-                <th>Exp All</th>
-                <th>Bal All</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+<h2>
+Financial Year
+<select id="fySelector" onchange="switchFinancialYear()"></select>
+<button class="btn-new-fy" onclick="createNewFY()">➕ New FY</button>
+</h2>
+<div id="currentBudget"></div>
 </div>
 
+<div class="section">
+<h2>Add Bill</h2>
+<input type="date" id="billDate">
+<input placeholder="CMIS Bill No" id="cmisBill">
+<input placeholder="Dept Bill No" id="deptBill">
+<textarea id="particulars" placeholder="Particulars"></textarea>
+<input type="number" placeholder="Sanction Amount" id="sanctionAmt">
+<input type="number" placeholder="Salary Amount" id="salAmt">
+<button onclick="addBill()">Add Bill</button>
+</div>
 
-    <!-- Edit Budget Modal -->
-    <div id="budgetModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeBudgetModal()">&times;</span>
-            <h3>Edit Financial Year Budget</h3>
-            <input type="text" id="editFy" placeholder="Financial Year (2026-27)">
-            <br>
-            <label>01-SALARIES Budget:</label>
-            <input type="number" id="editSalBudget" step="0.01">
-            <label>07-ALLOWANCES Budget:</label>
-            <input type="number" id="editAllBudget" step="0.01">
-            <button onclick="saveBudgetEdit()">Save Budget</button>
-            <button onclick="closeBudgetModal()">Cancel</button>
-        </div>
-    </div>
+<div class="section">
+<h2>Summary</h2>
+<div id="summary"></div>
+</div>
 
-    <!-- Edit Bill Modal -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h3>Edit Bill</h3>
-            <input type="hidden" id="editIndex">
-            <input type="date" id="editDate">
-            <input type="text" id="editCmis" placeholder="CMIS Bill Number">
-            <input type="text" id="editDept" placeholder="Department Bill Number">
-            <textarea id="editPart" placeholder="Particulars"></textarea>
-            <input type="number" id="editSanction" step="0.01" placeholder="Sanction Amount">
-            <input type="number" id="editSal" step="0.01" placeholder="Amount on Salaries">
-            <button onclick="saveEdit()">Save Changes</button>
-            <button onclick="closeModal()">Cancel</button>
-        </div>
-    </div>
+<div class="section">
+<h2>Bills <button class="btn-pdf" onclick="generateBillsPDF()">📄 PDF</button></h2>
+<table id="billsTable">
+<thead>
+<tr>
+<th>Date</th><th>CMIS</th><th>Particulars</th>
+<th>Sanction</th><th>Salary</th>
+<th>Sal Exp</th><th>Sal Bal</th>
+<th>All Exp</th><th>All Bal</th><th>Action</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
 
-    <script>
-        let data = { fy: '', salBudget: 0, allBudget: 0, bills: [] };
-        let editIndex = -1;
+<!-- EDIT MODAL -->
+<div id="editModal" class="modal">
+<div class="modal-content">
+<span class="close" onclick="closeModal()">&times;</span>
+<h3>Edit Bill</h3>
+<input type="date" id="editDate">
+<input id="editCmis">
+<input id="editDept">
+<textarea id="editPart"></textarea>
+<input type="number" id="editSanction">
+<input type="number" id="editSal">
+<button onclick="saveEdit()">Save</button>
+</div>
+</div>
 
-        // INDIAN RUPEE FORMATTING
-        function formatRupees(amount) {
-            return new Intl.NumberFormat('en-IN').format(amount);
-        }
+<script>
+/* ================== GITHUB CONFIG ================== */
+const GITHUB_OWNER = "kararoach69";
+const GITHUB_REPO  = "hcm-fund-register";
+const GITHUB_PATH  = "data";
+const GITHUB_TOKEN = "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";
+const API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
 
-        function generateFYOptions() {
-            const select = document.getElementById('fySelector');
-            const currentYear = new Date().getFullYear();
-            select.innerHTML = '<option value="">Select FY</option>';
-            
-            for(let i = 5; i >= 0; i--) {
-                const fy = (currentYear - i) + '-' + (currentYear - i + 1).toString().slice(-2);
-                const option = document.createElement('option');
-                option.value = fy;
-                option.text = fy;
-                select.appendChild(option);
-            }
-        }
+/* ================== STATE ================== */
+let data = { fy:'', salBudget:0, allBudget:0, bills:[] };
+let editIndex = -1;
 
-        function createNewFY() {
-            const newFY = prompt('Enter new Financial Year (e.g., 2026-27):');
-            if (newFY && newFY.trim()) {
-                switchFinancialYear(newFY);
-            }
-        }
+/* ================== HELPERS ================== */
+const headers = () => ({
+  Authorization: `token ${GITHUB_TOKEN}`,
+  Accept: "application/vnd.github+json"
+});
+const rupees = n => new Intl.NumberFormat('en-IN').format(n);
 
-        function switchFinancialYear(fy = document.getElementById('fySelector').value) {
-            if (!fy) return;
-            
-            const saved = localStorage.getItem(`hcmFundData_${fy}`);
-            if (saved) {
-                data = JSON.parse(saved);
-            } else {
-                data = { fy: fy, salBudget: 0, allBudget: 0, bills: [] };
-            }
-            
-            calculateAllRunningTotals();
-            saveData();
-            render();
-            generateFYOptions();
-            document.getElementById('fySelector').value = fy;
-        }
+/* ================== GITHUB IO ================== */
+async function loadFY(fy){
+  const r = await fetch(`${API}/${fy}.json`, { headers: headers() });
+  if(r.status === 404){
+    data = { fy, salBudget:0, allBudget:0, bills:[] };
+    return saveFY();
+  }
+  const f = await r.json();
+  data = JSON.parse(atob(f.content));
+  data.sha = f.sha;
+}
 
-        function loadData() {
-            generateFYOptions();
-            const currentFY = '2026-27';
-            switchFinancialYear(currentFY);
-        }
+async function saveFY(){
+  const body = {
+    message:`Update ${data.fy}`,
+    content:btoa(JSON.stringify(data,null,2))
+  };
+  if(data.sha) body.sha = data.sha;
+  const r = await fetch(`${API}/${data.fy}.json`,{
+    method:"PUT",
+    headers: headers(),
+    body: JSON.stringify(body)
+  });
+  data.sha = (await r.json()).content.sha;
+}
 
-        function saveData() {
-            localStorage.setItem(`hcmFundData_${data.fy}`, JSON.stringify(data));
-        }
+/* ================== FY ================== */
+function generateFYOptions(){
+  fySelector.innerHTML = '<option value="">Select FY</option>';
+  const y = new Date().getFullYear();
+  for(let i=5;i>=0;i--){
+    const fy = `${y-i}-${(y-i+1).toString().slice(-2)}`;
+    fySelector.add(new Option(fy,fy));
+  }
+}
 
-        function calculateRunningTotals(index) {
-            for (let i = 0; i <= index; i++) {
-                let bill = data.bills[i];
-                bill.salExp = data.bills.slice(0, i + 1).reduce((sum, b) => sum + b.salAmt, 0);
-                bill.allAmt = bill.sanctionAmt - bill.salAmt;
-                bill.allExp = data.bills.slice(0, i + 1).reduce((sum, b) => sum + (b.sanctionAmt - b.salAmt), 0);
-                bill.salBal = data.salBudget - bill.salExp;
-                bill.allBal = data.allBudget - bill.allExp;
-            }
-        }
+async function switchFinancialYear(){
+  const fy = fySelector.value;
+  if(!fy) return;
+  await loadFY(fy);
+  calcAll();
+  render();
+}
 
-        function calculateAllRunningTotals() {
-            data.bills.forEach((bill, index) => calculateRunningTotals(index));
-        }
+function createNewFY(){
+  const fy = prompt("Enter FY (2026-27)");
+  if(fy) { fySelector.value = fy; switchFinancialYear(); }
+}
 
-        function openBudgetModal() {
-            document.getElementById('editFy').value = data.fy;
-            document.getElementById('editSalBudget').value = data.salBudget;
-            document.getElementById('editAllBudget').value = data.allBudget;
-            document.getElementById('budgetModal').style.display = 'block';
-        }
+/* ================== LOGIC ================== */
+function calcAll(){
+  data.bills.forEach((b,i)=>{
+    b.salExp = data.bills.slice(0,i+1).reduce((s,x)=>s+x.salAmt,0);
+    b.allExp = data.bills.slice(0,i+1).reduce((s,x)=>s+(x.sanctionAmt-x.salAmt),0);
+    b.salBal = data.salBudget - b.salExp;
+    b.allBal = data.allBudget - b.allExp;
+  });
+}
 
-        function saveBudgetEdit() {
-            data.fy = document.getElementById('editFy').value;
-            data.salBudget = parseFloat(document.getElementById('editSalBudget').value) || 0;
-            data.allBudget = parseFloat(document.getElementById('editAllBudget').value) || 0;
-            calculateAllRunningTotals();
-            saveData();
-            closeBudgetModal();
-            render();
-        }
+/* ================== CRUD ================== */
+async function addBill(){
+  if(!billDate.value || !deptBill.value) return alert("Date & Dept Bill required");
+  data.bills.push({
+    date:billDate.value,
+    cmisBill:cmisBill.value,
+    deptBill:deptBill.value,
+    particulars:particulars.value,
+    sanctionAmt:+sanctionAmt.value||0,
+    salAmt:+salAmt.value||0
+  });
+  calcAll(); await saveFY(); render();
+}
 
-        function closeBudgetModal() {
-            document.getElementById('budgetModal').style.display = 'none';
-        }
+function editBill(i){
+  editIndex=i;
+  const b=data.bills[i];
+  editDate.value=b.date;
+  editCmis.value=b.cmisBill;
+  editDept.value=b.deptBill;
+  editPart.value=b.particulars;
+  editSanction.value=b.sanctionAmt;
+  editSal.value=b.salAmt;
+  editModal.style.display="block";
+}
 
-        function addBill() {
-            const bill = {
-                date: document.getElementById('billDate').value,
-                cmisBill: document.getElementById('cmisBill').value,
-                deptBill: document.getElementById('deptBill').value,
-                particulars: document.getElementById('particulars').value,
-                sanctionAmt: parseFloat(document.getElementById('sanctionAmt').value) || 0,
-                salAmt: parseFloat(document.getElementById('salAmt').value) || 0
-            };
-            if (!bill.date || !bill.deptBill) return alert('Date and Dept Bill required');
-            data.bills.push(bill);
-            calculateAllRunningTotals();
-            saveData();
-            render();
-            clearAddForm();
-        }
+async function saveEdit(){
+  Object.assign(data.bills[editIndex],{
+    date:editDate.value,
+    cmisBill:editCmis.value,
+    deptBill:editDept.value,
+    particulars:editPart.value,
+    sanctionAmt:+editSanction.value||0,
+    salAmt:+editSal.value||0
+  });
+  calcAll(); await saveFY(); closeModal(); render();
+}
 
-        function deleteBill(index) {
-            if (confirm('Delete this bill?')) {
-                data.bills.splice(index, 1);
-                calculateAllRunningTotals();
-                saveData();
-                render();
-            }
-        }
+async function deleteBill(i){
+  if(!confirm("Delete bill?")) return;
+  data.bills.splice(i,1);
+  calcAll(); await saveFY(); render();
+}
 
-        function editBill(index) {
-            editIndex = index;
-            const bill = data.bills[index];
-            document.getElementById('editIndex').value = index;
-            document.getElementById('editDate').value = bill.date;
-            document.getElementById('editCmis').value = bill.cmisBill;
-            document.getElementById('editDept').value = bill.deptBill;
-            document.getElementById('editPart').value = bill.particulars;
-            document.getElementById('editSanction').value = bill.sanctionAmt;
-            document.getElementById('editSal').value = bill.salAmt;
-            document.getElementById('editModal').style.display = 'block';
-        }
+function closeModal(){ editModal.style.display="none" }
 
-        function saveEdit() {
-            const index = parseInt(document.getElementById('editIndex').value);
-            data.bills[index] = {
-                date: document.getElementById('editDate').value,
-                cmisBill: document.getElementById('editCmis').value,
-                deptBill: document.getElementById('editDept').value,
-                particulars: document.getElementById('editPart').value,
-                sanctionAmt: parseFloat(document.getElementById('editSanction').value) || 0,
-                salAmt: parseFloat(document.getElementById('editSal').value) || 0
-            };
-            calculateAllRunningTotals();
-            saveData();
-            closeModal();
-            render();
-        }
+/* ================== RENDER ================== */
+function render(){
+  currentBudget.innerHTML = `<b>FY ${data.fy}</b>`;
+  const tbody = billsTable.querySelector("tbody");
+  tbody.innerHTML="";
+  data.bills.forEach((b,i)=>{
+    tbody.insertRow().innerHTML=`
+    <td>${b.date}</td>
+    <td>${b.cmisBill}</td>
+    <td>${b.particulars}</td>
+    <td>₹${rupees(b.sanctionAmt)}</td>
+    <td>₹${rupees(b.salAmt)}</td>
+    <td>₹${rupees(b.salExp)}</td>
+    <td class="${b.salBal>=0?'positive':'negative'}">₹${rupees(b.salBal)}</td>
+    <td>₹${rupees(b.allExp)}</td>
+    <td class="${b.allBal>=0?'positive':'negative'}">₹${rupees(b.allBal)}</td>
+    <td>
+      <button class="btn-edit" onclick="editBill(${i})">Edit</button>
+      <button class="btn-delete" onclick="deleteBill(${i})">Delete</button>
+    </td>`;
+  });
+}
 
-        function closeModal() {
-            document.getElementById('editModal').style.display = 'none';
-            editIndex = -1;
-        }
+/* ================== PDF ================== */
+function generateBillsPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text(`HCM Fund Register FY ${data.fy}`,20,20);
+  let y=30;
+  data.bills.forEach((b,i)=>{
+    doc.text(`${i+1}. ${b.date} | ₹${b.sanctionAmt}`,20,y);
+    y+=8;
+    if(y>270){ doc.addPage(); y=20; }
+  });
+  doc.save(`HCM_${data.fy}.pdf`);
+}
 
-        function render() {
-            document.getElementById('currentBudget').innerHTML = data.fy ? `
-                <div class="budget-box">
-                    <strong>FY: ${data.fy}</strong><br>
-                    01-SALARIES: ₹${formatRupees(data.salBudget)} | 
-                    07-ALLOWANCES: ₹${formatRupees(data.allBudget)}
-                </div>
-            ` : '<p>Select or create Financial Year first</p>';
+/* ================== INIT ================== */
+generateFYOptions();
+fySelector.value = "2026-27";
+switchFinancialYear();
+</script>
 
-            const lastBill = data.bills[data.bills.length - 1];
-            const totalSalExp = lastBill ? lastBill.salExp : 0;
-            const totalAllExp = lastBill ? lastBill.allExp : 0;
-            
-            document.getElementById('summary').innerHTML = `
-                <div class="budget-box">
-                    <h3>01-SALARIES</h3>
-                    <p>Budget: ₹${formatRupees(data.salBudget)}</p>
-                    <p>Total Exp: ₹${formatRupees(totalSalExp)}</p>
-                    <p class="balance ${data.salBudget - totalSalExp >= 0 ? 'positive' : 'negative'}">Balance: ₹${formatRupees(data.salBudget - totalSalExp)}</p>
-                </div>
-                <div class="budget-box">
-                    <h3>07-ALLOWANCES</h3>
-                    <p>Budget: ₹${formatRupees(data.allBudget)}</p>
-                    <p>Total Exp: ₹${formatRupees(totalAllExp)}</p>
-                    <p class="balance ${data.allBudget - totalAllExp >= 0 ? 'positive' : 'negative'}">Balance: ₹${formatRupees(data.allBudget - totalAllExp)}</p>
-                </div>
-            `;
-
-            const tbody = document.getElementById('billsTable').querySelector('tbody');
-            tbody.innerHTML = '';
-            data.bills.forEach((bill, index) => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${bill.date}<br><span style="font-size:10px">HCM/${bill.deptBill}</span></td>
-                    <td>${bill.cmisBill}</td>
-                    <td style="white-space: pre-wrap;">${bill.particulars}</td>
-                    <td>₹${formatRupees(bill.sanctionAmt)}</td>
-                    <td>₹${formatRupees(bill.salAmt)}</td>
-                    <td>₹${formatRupees(bill.salExp)}</td>
-                    <td class="${bill.salBal >= 0 ? 'positive' : 'negative'}">₹${formatRupees(bill.salBal)}</td>
-                    <td>₹${formatRupees(bill.allAmt)}</td>
-                    <td>₹${formatRupees(bill.allExp)}</td>
-                    <td class="${bill.allBal >= 0 ? 'positive' : 'negative'}">₹${formatRupees(bill.allBal)}</td>
-                    <td class="action-col">
-                        <button class="btn-edit" onclick="editBill(${index})">Edit</button>
-                        <button class="btn-delete" onclick="deleteBill(${index})">Delete</button>
-                    </td>
-                `;
-
-            });
-        }
-
-        function clearAddForm() {
-            document.getElementById('billDate').value = '';
-            document.getElementById('cmisBill').value = '';
-            document.getElementById('deptBill').value = '';
-            document.getElementById('particulars').value = '';
-            document.getElementById('sanctionAmt').value = '';
-            document.getElementById('salAmt').value = '';
-        }
-
-        function generateBillsPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.setFontSize(18);
-            doc.text(`HCM Fund Register - Bills List FY ${data.fy || 'N/A'}`, 20, 20);
-            doc.setFontSize(12);
-            
-            let y = 40;
-            data.bills.forEach((bill, index) => {
-                if (y > 270) { doc.addPage(); y = 20; }
-                doc.text(`Bill ${index + 1}:`, 20, y);
-                y += 5;
-                doc.text(`${bill.date} | HCM/${bill.deptBill} | ${bill.cmisBill}`, 25, y);
-                y += 5;
-                doc.text(`Particulars: ${bill.particulars.substring(0, 80)}${bill.particulars.length > 80 ? '...' : ''}`, 25, y);
-                y += 7;
-                doc.text(`Sanction: ₹${formatRupees(bill.sanctionAmt)} | Sal: ₹${formatRupees(bill.salAmt)} | All: ₹${formatRupees(bill.allAmt)}`, 25, y);
-                y += 7;
-                doc.text(`Sal Exp: ₹${formatRupees(bill.salExp)} | Sal Bal: ₹${formatRupees(bill.salBal)}`, 25, y);
-                y += 7;
-                doc.text(`All Exp: ₹${formatRupees(bill.allExp)} | All Bal: ₹${formatRupees(bill.allBal)}`, 25, y);
-                y += 10;
-            });
-            doc.save(`HCM-Bills-Register-${data.fy || 'current'}.pdf`);
-        }
-
-        window.onclick = function(event) {
-            const budgetModal = document.getElementById('budgetModal');
-            const editModal = document.getElementById('editModal');
-            if (event.target == budgetModal) closeBudgetModal();
-            if (event.target == editModal) closeModal();
-        }
-
-        loadData();
-        render();
-    </script>
 </body>
 </html>
